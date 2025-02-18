@@ -1,0 +1,95 @@
+/* Body and base styles */
+body {
+    background-color: #0f172a;
+    color: #e2e8f0;
+    overflow-x: hidden;
+}
+
+/* Login Screen Animations */
+#loginScreen {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out;
+}
+#loginScreen.slide-out {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+/* Dashboard Animations */
+#dashboardContainer {
+    opacity: 0;
+    transform: translateX(100%);
+    transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out;
+}
+#dashboardContainer.active {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Section Transitions */
+#home, #users {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+}
+#home.active, #users.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Header Styling */
+header {
+    border-bottom: 1px solid #334155;
+}
+
+/* Account dropdown styling */
+#accountDropdown {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform-origin: top right;
+    transform: scale(0.95);
+}
+
+#accountDropdown.show {
+    display: block;
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Sidebar Styling */
+.sidebar {
+    background: linear-gradient(to bottom, #1e293b, #0f172a);
+    border-right: 1px solid #334155;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateX(-100%);
+    transition: transform 0.7s ease-in-out;
+    height: calc(100vh - 57px); /* Adjust for header height */
+}
+.sidebar.active {
+    transform: translateX(0);
+}
+
+.active-nav {
+    background-color: #6366f1;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+/* Card styling */
+.card {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.card.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Form elements */
+input::placeholder {
+    color: #64748b;
+}
