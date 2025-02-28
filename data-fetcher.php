@@ -2,18 +2,14 @@
 header('Content-Type: application/json');
 
 // Updated database connection
-$db_config = [
-    'host' => '192.168.0.101',
-    'dbname' => 'PWRSYNC',
-    'user' => 'tcpthesis2',
-    'password' => 'powersync#999'
-];
+$host = "localhost";
+$user = "root";      // Default XAMPP user
+$password = "";      // Empty by default in XAMPP
+$database = "powersync"; // Change if needed
 
 try {
     $pdo = new PDO(
-        "mysql:host={$db_config['host']};dbname={$db_config['dbname']}", 
-        $db_config['user'], 
-        $db_config['password']
+        "mysql:host=$host;dbname=$database;charset=utf8", $user, $password
     );
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
@@ -25,90 +21,93 @@ $request = $_GET['request'] ?? '';
 
 switch($request) {
     case 'consumption_data':
-        // Fetch last 24 hours of consumption data with voltage, current, power and energy
+        // Fetch last 24 hours of data with voltage, current, avg current, and peak timestamps
         $stmt = $pdo->prepare("
             SELECT 
                 DATE_FORMAT(timestamp, '%H:00') as hour,
                 AVG(voltage) as voltage,
                 AVG(current) as current,
-                AVG(power) as power,
-                SUM(energy) as energy,
+                SUM(current) as current_used,
                 MAX(CASE WHEN HOUR(timestamp) BETWEEN 13 AND 16 THEN 1 ELSE 0 END) as is_peak
-            FROM power_metrics 
+            FROM consumption_data 
             WHERE timestamp >= NOW() - INTERVAL 24 HOUR
-            GROUP BY DATE_FORMAT(timestamp, '%H:00')
-            ORDER BY timestamp
+            GROUP BY hour
+            ORDER BY timestamp ASC
         ");
         $stmt->execute();
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode($data);
+        $hourlyData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Get peak current time
+        $stmtPeak = $pdo->prepare("
+            SELECT 
+                timestamp as peak_time,
+                current as peak_current
+            FROM consumption_data 
+            WHERE timestamp >= NOW() - INTERVAL 24 HOUR
+            ORDER BY current DESC
+            LIMIT 1
+        ");
+        $stmtPeak->execute();
+        $peakData = $stmtPeak->fetch(PDO::FETCH_ASSOC);
+        
+        // Get average current
+        $stmtAvg = $pdo->prepare("
+            SELECT 
+                AVG(current) as avg_current
+            FROM consumption_data 
+            WHERE timestamp >= NOW() - INTERVAL 24 HOUR
+        ");
+        $stmtAvg->execute();
+        $avgData = $stmtAvg->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'hourly' => $hourlyData,
+            'peak' => $peakData,
+            'average' => $avgData
+        ]);
         break;
 
     case 'statistics_data':
-        // Fetch statistical data for parameters (voltage, current, power, energy)
+        // Fetch summary statistics for voltage and current metrics
         $stmt = $pdo->prepare("
             SELECT 
-                'Voltage' as parameter,
+                'Voltage' as metric,
                 AVG(voltage) as average,
                 MIN(voltage) as minimum,
                 MAX(voltage) as maximum,
-                STDDEV(voltage) as standard_deviation
-            FROM power_metrics
+                STDDEV(voltage) as std_dev
+            FROM consumption_data 
             WHERE timestamp >= NOW() - INTERVAL 24 HOUR
-            
-            UNION ALL
-            
+            UNION
             SELECT 
-                'Current' as parameter,
+                'Current' as metric,
                 AVG(current) as average,
                 MIN(current) as minimum,
                 MAX(current) as maximum,
-                STDDEV(current) as standard_deviation
-            FROM power_metrics
-            WHERE timestamp >= NOW() - INTERVAL 24 HOUR
-            
-            UNION ALL
-            
-            SELECT 
-                'Power' as parameter,
-                AVG(power) as average,
-                MIN(power) as minimum,
-                MAX(power) as maximum,
-                STDDEV(power) as standard_deviation
-            FROM power_metrics
-            WHERE timestamp >= NOW() - INTERVAL 24 HOUR
-            
-            UNION ALL
-            
-            SELECT 
-                'Energy' as parameter,
-                SUM(energy) as average,
-                MIN(energy) as minimum,
-                MAX(energy) as maximum,
-                STDDEV(energy) as standard_deviation
-            FROM power_metrics
+                STDDEV(current) as std_dev
+            FROM consumption_data 
             WHERE timestamp >= NOW() - INTERVAL 24 HOUR
         ");
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode($data);
-        break;
-
-    case 'hourly_distribution':
-        // Fetch hourly distribution of power usage
-        $stmt = $pdo->prepare("
+        
+        // Get hourly average for pie chart
+        $stmtHourly = $pdo->prepare("
             SELECT 
                 HOUR(timestamp) as hour,
-                AVG(power) as average_power,
-                SUM(energy) as total_energy
-            FROM power_metrics 
+                SUM(current) as total_current
+            FROM consumption_data 
             WHERE timestamp >= NOW() - INTERVAL 24 HOUR
             GROUP BY HOUR(timestamp)
             ORDER BY hour
         ");
-        $stmt->execute();
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode($data);
+        $stmtHourly->execute();
+        $hourlyData = $stmtHourly->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'stats' => $data,
+            'hourly' => $hourlyData
+        ]);
         break;
 
     default:

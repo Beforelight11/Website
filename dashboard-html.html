@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerSync Energy Dashboard</title>
+    <title>PowerSync Current Monitoring Dashboard</title>
     
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
@@ -19,7 +19,7 @@
         <div class="w-full max-w-md p-8 space-y-8 bg-slate-800 rounded-2xl shadow-2xl">
             <div class="text-center">
                 <h1 class="text-4xl font-bold text-indigo-500 transform transition-transform hover:scale-105">PowerSync</h1>
-                <p class="text-slate-400 mt-2 text-sm">Energy Consumption Dashboard</p>
+                <p class="text-slate-400 mt-2 text-sm">Current Monitoring Dashboard</p>
             </div>
             <form id="loginForm" class="space-y-6">
                 <div>
@@ -100,12 +100,17 @@
                             </a>
                         </li>
                         <li class="mb-4">
+                            <a href="#statistics" class="block p-3 rounded-lg hover:bg-slate-700 transition duration-300">
+                                <i class="fas fa-chart-bar mr-2"></i> Statistics
+                            </a>
+                        </li>
+                        <li class="mb-4">
                             <a href="#users" class="block p-3 rounded-lg hover:bg-slate-700 transition duration-300">
                                 <i class="fas fa-users mr-2"></i> Users
                             </a>
                         </li>
-                        <li class="mb-4">
-                            <a href="#" id="logoutBtn" class="block p-3 rounded-lg hover:bg-slate-700 transition duration-300">
+                        <li class="mt-auto">
+                            <a href="#" id="logoutBtn" class="block p-3 rounded-lg text-red-400 hover:bg-slate-700 transition duration-300">
                                 <i class="fas fa-sign-out-alt mr-2"></i> Logout
                             </a>
                         </li>
@@ -113,67 +118,213 @@
                 </nav>
             </div>
 
-            <!-- Main Content -->
-            <div class="flex-grow p-8">
+            <!-- Main Content Area -->
+            <div class="flex-1 p-6 overflow-y-auto">
                 <!-- Home Section -->
-                <div id="home" class="active">
-                    <h2 class="text-3xl font-bold mb-6 text-indigo-500">Energy Consumption Dashboard</h2>
+                <section id="home" class="space-y-8">
+                    <h2 class="text-3xl font-bold text-white">Power Consumption Dashboard</h2>
+                    <p class="text-slate-400">Monitor your current consumption in real-time and identify peak hours.</p>
                     
-                    <div class="grid grid-cols-2 gap-6">
-                        <!-- Energy Consumption Cards -->
-                        <div class="card p-6 rounded-2xl">
-                            <h3 class="text-xl font-semibold mb-4 text-slate-300">Total Consumption</h3>
-                            <p class="text-3xl font-bold text-indigo-500" id="totalConsumption">Loading...</p>
-                            <div class="mt-4 text-sm text-slate-400" id="lastWeekConsumption">Loading last week data...</div>
+                    <!-- Cards Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <!-- Card 1: Total Consumption -->
+                        <div class="card p-6">
+                            <h3 class="text-xl font-semibold text-white mb-4">Average Current</h3>
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+                                    <i class="fas fa-bolt text-2xl text-green-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-3xl font-bold text-white" id="totalConsumption">0.00 A</p>
+                                    <p class="text-sm text-slate-400" id="lastWeekConsumption">Last week: 0.00 A</p>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="card p-6 rounded-2xl">
-                            <h3 class="text-xl font-semibold mb-4 text-slate-300">Peak Hours</h3>
-                            <p class="text-3xl font-bold text-indigo-500" id="peakHours">Loading...</p>
-                            <div class="mt-4 text-sm text-slate-400" id="peakConsumption">Loading peak data...</div>
+                        
+                        <!-- Card 2: Peak Hours -->
+                        <div class="card p-6">
+                            <h3 class="text-xl font-semibold text-white mb-4">Peak Time</h3>
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mr-4">
+                                    <i class="fas fa-clock text-2xl text-indigo-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-3xl font-bold text-white" id="peakHours">00:00</p>
+                                    <p class="text-sm text-slate-400" id="peakConsumption">Peak: 0.00 A</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card 3: Notifications -->
+                        <div class="card p-6">
+                            <h3 class="text-xl font-semibold text-white mb-4">System Status</h3>
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+                                    <i class="fas fa-check-circle text-2xl text-green-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xl font-bold text-white">All Systems Normal</p>
+                                    <p class="text-sm text-slate-400">Last updated: <span id="lastUpdated">Just now</span></p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Power Metrics Chart -->
-                    <div class="mt-8 card p-6 rounded-2xl">
-                        <h3 class="text-xl font-semibold mb-4 text-slate-300">Power Metrics</h3>
-                        <div class="h-64">
+                    
+                    <!-- Chart Container -->
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold text-white mb-4">24-Hour Consumption Overview</h3>
+                        <div class="h-80">
                             <canvas id="consumptionChart"></canvas>
                         </div>
-                        <p class="text-sm text-slate-400 mt-4">Showing voltage, current, power, and energy metrics over the last 24 hours. Click on legend items to toggle visibility.</p>
                     </div>
-                </div>
-
-                <!-- Users Section -->
-                <div id="users" class="hidden">
-                    <h2 class="text-3xl font-bold mb-6 text-indigo-500">User Management</h2>
-                    <table class="w-full card rounded-2xl overflow-hidden">
-                        <thead>
-                            <tr class="bg-slate-800">
-                                <th class="p-4 text-left text-slate-300">Name</th>
-                                <th class="p-4 text-left text-slate-300">Department</th>
-                                <th class="p-4 text-left text-slate-300">Access Level</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="border-b border-slate-700">
-                                <td class="p-4">John Doe</td>
-                                <td class="p-4">Operations</td>
-                                <td class="p-4">Admin</td>
-                            </tr>
-                            <tr class="border-b border-slate-700">
-                                <td class="p-4">Jane Smith</td>
-                                <td class="p-4">Engineering</td>
-                                <td class="p-4">User</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                </section>
+                
+                <!-- Statistics Section -->
+                <section id="statistics" class="hidden space-y-8">
+                    <h2 class="text-3xl font-bold text-white">Detailed Statistics</h2>
+                    <p class="text-slate-400">Analyze your power consumption patterns with detailed metrics.</p>
+                    
+                    <!-- Statistics Cards -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Stats Table Card -->
+                        <div class="card p-6">
+                            <h3 class="text-xl font-semibold text-white mb-4">Metrics Overview</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full bg-slate-800 rounded-lg">
+                                    <thead>
+                                        <tr class="bg-slate-700 text-left text-sm text-slate-300">
+                                            <th class="p-3">Metric</th>
+                                            <th class="p-3">Average</th>
+                                            <th class="p-3">Minimum</th>
+                                            <th class="p-3">Maximum</th>
+                                            <th class="p-3">Std Dev</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="statsTableBody">
+                                        <tr class="border-b border-slate-700">
+                                            <td class="p-3">Voltage</td>
+                                            <td class="p-3">0.00</td>
+                                            <td class="p-3">0.00</td>
+                                            <td class="p-3">0.00</td>
+                                            <td class="p-3">0.00</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700">
+                                            <td class="p-3">Current</td>
+                                            <td class="p-3">0.00</td>
+                                            <td class="p-3">0.00</td>
+                                            <td class="p-3">0.00</td>
+                                            <td class="p-3">0.00</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Bar Chart -->
+                        <div class="card p-6">
+                            <h3 class="text-xl font-semibold text-white mb-4">Metrics Comparison</h3>
+                            <div class="h-64">
+                                <canvas id="statsBarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pie Chart -->
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold text-white mb-4">Current Consumption by Time of Day</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="h-64">
+                                <canvas id="energyPieChart"></canvas>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="space-y-4">
+                                    <h4 class="text-lg font-medium text-white">Distribution Analysis</h4>
+                                    <p class="text-slate-400">This chart shows how current consumption is distributed throughout the day. Peak hours typically occur during the afternoon when business operations are at their highest.</p>
+                                    <p class="text-slate-400">Understanding this pattern can help optimize operations and potentially reduce electricity costs by scheduling high-power tasks during off-peak hours.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Users Section (Admin Only) -->
+                <section id="users" class="hidden space-y-8">
+                    <h2 class="text-3xl font-bold text-white">User Management</h2>
+                    <p class="text-slate-400">Manage system users and permissions (Admin access only).</p>
+                    
+                    <!-- Users Table Card -->
+                    <div class="card p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-white">User Accounts</h3>
+                            <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white text-sm font-medium transition duration-300">
+                                <i class="fas fa-plus mr-2"></i> Add User
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-slate-800 rounded-lg">
+                                <thead>
+                                    <tr class="bg-slate-700 text-left text-sm text-slate-300">
+                                        <th class="p-3">Username</th>
+                                        <th class="p-3">Role</th>
+                                        <th class="p-3">Last Login</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-slate-700">
+                                        <td class="p-3">admin</td>
+                                        <td class="p-3">Administrator</td>
+                                        <td class="p-3">Just now</td>
+                                        <td class="p-3"><span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Active</span></td>
+                                        <td class="p-3">
+                                            <button class="text-indigo-400 hover:text-indigo-300 mr-2"><i class="fas fa-edit"></i></button>
+                                            <button class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-slate-700">
+                                        <td class="p-3">user</td>
+                                        <td class="p-3">Regular User</td>
+                                        <td class="p-3">3 days ago</td>
+                                        <td class="p-3"><span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Active</span></td>
+                                        <td class="p-3">
+                                            <button class="text-indigo-400 hover:text-indigo-300 mr-2"><i class="fas fa-edit"></i></button>
+                                            <button class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Permissions Card -->
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold text-white mb-4">User Roles & Permissions</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="text-lg font-medium text-white mb-3">Administrator</h4>
+                                <ul class="list-disc list-inside text-slate-400 space-y-2">
+                                    <li>Full access to all dashboard sections</li>
+                                    <li>User management capabilities</li>
+                                    <li>System configuration</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-medium text-white mb-3">Regular User</h4>
+                                <ul class="list-disc list-inside text-slate-400 space-y-2">
+                                    <li>View dashboard and statistics</li>
+                                    <li>Personal profile management</li>
+                                    <li>No user management access</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript - Place at the end for better performance -->
+    <!-- Custom JavaScript -->
     <script src="script.js"></script>
 </body>
 </html>
