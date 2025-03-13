@@ -82,9 +82,15 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
 });
 
 // Function to fetch data from the server and update dashboard
-function fetchDataAndUpdateDashboard() {
-    // Fetch consumption data for chart
-    fetch('data-fetcher.php?request=consumption_data')
+function fetchDataAndUpdateDashboard(range = '24h') {
+    // Update chart title
+    const chartTitleElement = document.getElementById('consumptionChartTitle');
+    chartTitleElement.textContent = range === '24h' 
+        ? '24-Hour Consumption Overview' 
+        : '7-Day Consumption Overview';
+
+    // Update fetch URL to include range parameter
+    fetch(`data-fetcher.php?request=consumption_data&range=${range}`)
         .then(response => response.json())
         .then(data => {
             if (data.error) {
@@ -93,7 +99,7 @@ function fetchDataAndUpdateDashboard() {
             }
             
             // Update chart with real data
-            updateConsumptionChart(data.hourly);
+            updateConsumptionChart(data.hourly, range);
             
             // Update dashboard cards with consumption data
             updateDashboardCards(data);
@@ -102,8 +108,8 @@ function fetchDataAndUpdateDashboard() {
             console.error('Error fetching consumption data:', error);
         });
     
-    // Fetch statistics data
-    fetch('data-fetcher.php?request=statistics_data')
+    // Fetch statistics data with the same range
+    fetch(`data-fetcher.php?request=statistics_data&range=${range}`)
         .then(response => response.json())
         .then(data => {
             if (data.error) {
@@ -119,16 +125,21 @@ function fetchDataAndUpdateDashboard() {
         });
 }
 
+// Add event listener for range selector
+document.getElementById('consumptionRangeSelector').addEventListener('change', function(e) {
+    const selectedRange = e.target.value;
+    fetchDataAndUpdateDashboard(selectedRange);
+});
+
 // Function to update the consumption chart with real data
-function updateConsumptionChart(data) {
+function updateConsumptionChart(data, range) {
     const ctx = document.getElementById('consumptionChart').getContext('2d');
     
     // Extract data from API response
-    const timeLabels = data.map(item => item.hour);
+    const timeLabels = data.map(item => range === '24h' ? item.hour : item.day);
     const currentData = data.map(item => parseFloat(item.current));
     const voltageData = data.map(item => parseFloat(item.voltage));
     const currentUsedData = data.map(item => parseFloat(item.current_used));
-    const isPeakData = data.map(item => parseInt(item.is_peak) === 1);
     
     // If chart already exists, destroy it
     if (consumptionChart) {
@@ -160,7 +171,7 @@ function updateConsumptionChart(data) {
                     yAxisID: 'y1'
                 },
                 {
-                    label: 'Current Used (A)',
+                    label: range === '24h' ? 'Current Used (A)' : 'Daily Current Used (A)',
                     data: currentUsedData,
                     borderColor: 'rgb(99, 102, 241)',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -226,7 +237,7 @@ function updateConsumptionChart(data) {
                     },
                     title: {
                         display: true,
-                        text: 'Current Used (A)',
+                        text: range === '24h' ? 'Current Used (A)' : 'Daily Current Used (A)',
                         color: '#e2e8f0'
                     }
                 },
@@ -239,7 +250,7 @@ function updateConsumptionChart(data) {
                     },
                     title: {
                         display: true,
-                        text: 'Time',
+                        text: range === '24h' ? 'Time' : 'Day',
                         color: '#e2e8f0'
                     }
                 }
@@ -247,6 +258,8 @@ function updateConsumptionChart(data) {
         }
     });
 }
+
+
 
 // Function to update dashboard cards with consumption data
 function updateDashboardCards(data) {
