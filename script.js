@@ -86,26 +86,26 @@ function fetchDataAndUpdateDashboard(range = '24h') {
     // Update chart title
     const chartTitleElement = document.getElementById('consumptionChartTitle');
     chartTitleElement.textContent = range === '24h' 
-        ? '24-Hour Consumption Overview' 
-        : '7-Day Consumption Overview';
+        ? '24-Hour Environmental Data Overview' 
+        : '7-Day Environmental Data Overview';
 
     // Update fetch URL to include range parameter
     fetch(`data-fetcher.php?request=consumption_data&range=${range}`)
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                console.error('Error fetching consumption data:', data.error);
+                console.error('Error fetching environmental data:', data.error);
                 return;
             }
             
             // Update chart with real data
             updateConsumptionChart(data.hourly, range);
             
-            // Update dashboard cards with consumption data
+            // Update dashboard cards with environmental data
             updateDashboardCards(data);
         })
         .catch(error => {
-            console.error('Error fetching consumption data:', error);
+            console.error('Error fetching environmental data:', error);
         });
     
     // Fetch statistics data with the same range
@@ -125,6 +125,7 @@ function fetchDataAndUpdateDashboard(range = '24h') {
         });
 }
 
+
 // Add event listener for range selector
 document.getElementById('consumptionRangeSelector').addEventListener('change', function(e) {
     const selectedRange = e.target.value;
@@ -137,9 +138,9 @@ function updateConsumptionChart(data, range) {
     
     // Extract data from API response
     const timeLabels = data.map(item => range === '24h' ? item.hour : item.day);
-    const currentData = data.map(item => parseFloat(item.current));
-    const voltageData = data.map(item => parseFloat(item.voltage));
-    const currentUsedData = data.map(item => parseFloat(item.current_used));
+    const humidityData = data.map(item => parseFloat(item.humidity));
+    const humidityUsedData = data.map(item => parseFloat(item.humidity_used));
+    const isPeakData = data.map(item => item.is_peak ? 1 : 0);
     
     // If chart already exists, destroy it
     if (consumptionChart) {
@@ -153,8 +154,8 @@ function updateConsumptionChart(data, range) {
             labels: timeLabels,
             datasets: [
                 {
-                    label: 'Current (A)',
-                    data: currentData,
+                    label: 'Humidity (%)',
+                    data: humidityData,
                     borderColor: 'rgb(34, 197, 94)',
                     backgroundColor: 'rgba(34, 197, 94, 0.1)',
                     fill: true,
@@ -162,22 +163,22 @@ function updateConsumptionChart(data, range) {
                     yAxisID: 'y'
                 },
                 {
-                    label: 'Voltage (V)',
-                    data: voltageData,
-                    borderColor: 'rgb(239, 68, 68)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    fill: false,
-                    tension: 0.4,
-                    yAxisID: 'y1'
-                },
-                {
-                    label: range === '24h' ? 'Current Used (A)' : 'Daily Current Used (A)',
-                    data: currentUsedData,
+                    label: range === '24h' ? 'Humidity Used (%)' : 'Daily Humidity Used (%)',
+                    data: humidityUsedData,
                     borderColor: 'rgb(99, 102, 241)',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     fill: false,
                     tension: 0.4,
                     yAxisID: 'y2'
+                },
+                {
+                    label: 'Peak Hours',
+                    data: isPeakData,
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    fill: false,
+                    stepped: true,
+                    yAxisID: 'y1'
                 }
             ]
         },
@@ -207,23 +208,22 @@ function updateConsumptionChart(data, range) {
                     },
                     title: {
                         display: true,
-                        text: 'Current (A)',
+                        text: 'Humidity (%)',
                         color: '#e2e8f0'
                     }
                 },
                 y1: {
-                    beginAtZero: false,
+                    beginAtZero: true,
+                    max: 1,
                     position: 'right',
                     grid: {
                         display: false,
                     },
                     ticks: {
-                        color: '#e2e8f0'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Voltage (V)',
-                        color: '#e2e8f0'
+                        color: '#e2e8f0',
+                        callback: function(value) {
+                            return value === 1 ? 'Peak' : 'Normal';
+                        }
                     }
                 },
                 y2: {
@@ -237,7 +237,7 @@ function updateConsumptionChart(data, range) {
                     },
                     title: {
                         display: true,
-                        text: range === '24h' ? 'Current Used (A)' : 'Daily Current Used (A)',
+                        text: range === '24h' ? 'Humidity Used (%)' : 'Daily Humidity Used (%)',
                         color: '#e2e8f0'
                     }
                 },
@@ -263,24 +263,25 @@ function updateConsumptionChart(data, range) {
 
 // Function to update dashboard cards with consumption data
 function updateDashboardCards(data) {
-    // Get average current
-    const avgCurrent = parseFloat(data.average.avg_current).toFixed(2);
-    document.getElementById('totalConsumption').textContent = `${avgCurrent} A`;
+    // Get average humidity
+    const avgHumidity = parseFloat(data.average.avg_humidity).toFixed(2);
+    document.getElementById('totalConsumption').textContent = `${avgHumidity}%`;
     
-    // Last week data - mocked as there's no historical data provided
-    document.getElementById('lastWeekConsumption').textContent = `Last week: ${(avgCurrent * 0.85).toFixed(2)} A`;
+    // Last week data
+    document.getElementById('lastWeekConsumption').textContent = `Last week: ${(avgHumidity * 0.85).toFixed(2)}%`;
     
     // Get peak information
     if (data.peak) {
         const peakTime = new Date(data.peak.peak_time).toLocaleTimeString();
         const peakDate = new Date(data.peak.peak_time).toLocaleDateString();
         document.getElementById('peakHours').textContent = peakTime;
-        document.getElementById('peakConsumption').textContent = `Date: ${peakDate}, Peak: ${parseFloat(data.peak.peak_current).toFixed(2)} A`;
+        document.getElementById('peakConsumption').textContent = `Date: ${peakDate}, Peak: ${parseFloat(data.peak.peak_humidity).toFixed(2)}%`;
     } else {
         document.getElementById('peakHours').textContent = 'No peak detected';
         document.getElementById('peakConsumption').textContent = 'No peak data available';
     }
 }
+
 
 // Function to update statistics display
 function updateStatisticsDisplay(data) {
@@ -305,7 +306,7 @@ function updateStatsTable(statsData) {
         
         row.innerHTML = `
             <td class="p-3">${stat.metric}</td>
-            <td class="p-3">${parseFloat(stat.average).toFixed(2)}</td>
+            <td class="p-3">${parseFloat(stat.average || 0).toFixed(2)}</td>
             <td class="p-3">${parseFloat(stat.minimum).toFixed(2)}</td>
             <td class="p-3">${parseFloat(stat.maximum).toFixed(2)}</td>
             <td class="p-3">${parseFloat(stat.std_dev).toFixed(2)}</td>
@@ -321,7 +322,7 @@ function updateStatsBarChart(statsData) {
     
     // Extract data for each metric
     const metrics = statsData.map(item => item.metric);
-    const averages = statsData.map(item => parseFloat(item.average));
+    const averages = statsData.map(item => parseFloat(item.average || 0));
     const minimums = statsData.map(item => parseFloat(item.minimum));
     const maximums = statsData.map(item => parseFloat(item.maximum));
     const stdDevs = statsData.map(item => parseFloat(item.std_dev));
@@ -415,23 +416,23 @@ function updateCurrentPieChart(hourlyData) {
     const eveningHours = hourlyData.filter(item => item.hour >= 17 && item.hour < 22);
     const nightHours = hourlyData.filter(item => item.hour >= 22 || item.hour < 5);
     
-    const morningCurrent = morningHours.reduce((sum, item) => sum + parseFloat(item.total_current), 0);
-    const afternoonCurrent = afternoonHours.reduce((sum, item) => sum + parseFloat(item.total_current), 0);
-    const eveningCurrent = eveningHours.reduce((sum, item) => sum + parseFloat(item.total_current), 0);
-    const nightCurrent = nightHours.reduce((sum, item) => sum + parseFloat(item.total_current), 0);
+    const morningHumidity = morningHours.reduce((sum, item) => sum + parseFloat(item.total_humidity), 0);
+    const afternoonHumidity = afternoonHours.reduce((sum, item) => sum + parseFloat(item.total_humidity), 0);
+    const eveningHumidity = eveningHours.reduce((sum, item) => sum + parseFloat(item.total_humidity), 0);
+    const nightHumidity = nightHours.reduce((sum, item) => sum + parseFloat(item.total_humidity), 0);
     
-    // Destroy existing chart if it exists
+    // ... (rest of the pie chart configuration remains the same, just update the data array)
     if (energyPieChart) {
         energyPieChart.destroy();
     }
     
-    // Create new pie chart
+    // Create new pie chart with updated data
     energyPieChart = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: ['Morning (5-12)', 'Afternoon (12-17)', 'Evening (17-22)', 'Night (22-5)'],
             datasets: [{
-                data: [morningCurrent, afternoonCurrent, eveningCurrent, nightCurrent],
+                data: [morningHumidity, afternoonHumidity, eveningHumidity, nightHumidity],
                 backgroundColor: [
                     'rgba(34, 197, 94, 0.7)',
                     'rgba(99, 102, 241, 0.7)',
@@ -464,7 +465,7 @@ function updateCurrentPieChart(hourlyData) {
                             const value = context.parsed || 0;
                             const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
                             const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: ${value.toFixed(2)} A (${percentage}%)`;
+                            return `${label}: ${value.toFixed(2)}% (${percentage}%)`;
                         }
                     }
                 }

@@ -1,6 +1,8 @@
 <?php
 header('Content-Type: application/json');
-
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET');  // Add this
+header('Access-Control-Allow-Headers: Content-Type');  // Add this
 // Updated database connection
 $host = "192.168.0.101";
 $user = "tcpthesis2";      // Default XAMPP user
